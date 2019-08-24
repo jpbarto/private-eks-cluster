@@ -14,6 +14,18 @@ With the VPC environment and permissions prepared the shell script will provisio
 Next it will deploy an autoscaling group into the VPC to connect to the EKS cluster.  Once completed you can (from within the VPC) communicate
 with your EKS cluster and see a list of running worker nodes.
 
+## Getting started
+
+You should only need to edit the variable definitions found in `variables.sh`.  The variables are:
+ - CLUSTER_NAME, the desired name of the EKS cluster
+ - REGION, the AWS region in which you want resources created
+ - HTTP_PROXY_ENDPOINT_SERVICE_NAME, this is the name of a VPC endpoint service you created which represents an HTTP proxy
+ - KEY_PAIR, the name of an EC2 key pair to be used as an SSH key on the worker nodes
+ - VERSION, the EKS version you wish to create ('1.13', '1.12', or '1.11')
+ - AMI_ID, the region-specific AWS EKS worker AMI to use.  See below for a link to the AWS documentation listing all managed AMIs.
+ - INSTANCE_TYPE, the instance type to be used for the worker nodes
+ - S3_STAGING_LOCATION, an S3 bucket name and optional prefix to which CloudFormation templates and a kubectl binary will be uploaded
+
 ## Development notes
 ### configure proxy for docker daemon
 https://stackoverflow.com/questions/23111631/cannot-download-docker-images-behind-a-proxy

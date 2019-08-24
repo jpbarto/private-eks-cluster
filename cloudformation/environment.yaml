@@ -15,7 +15,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties: 
       Parameters: 
-        StackPrefix: !Sub ${StackPrefix}-private-eks-vpc
+        StackPrefix: !Ref StackPrefix
         HttpProxyServiceName: !Ref HttpProxyServiceName
       TemplateURL: network.yaml
 
@@ -23,7 +23,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties: 
       Parameters: 
-        StackPrefix: !Sub ${StackPrefix}
+        StackPrefix: !Ref StackPrefix
       TemplateURL: permissions.yaml
 
 Outputs:
