@@ -26,6 +26,26 @@ You should only need to edit the variable definitions found in `variables.sh`.  
  - INSTANCE_TYPE, the instance type to be used for the worker nodes
  - S3_STAGING_LOCATION, an S3 bucket name and optional prefix to which CloudFormation templates and a kubectl binary will be uploaded
 
+ Once these values are set you can execute `launch_all.sh` and get a coffee.  This will take approximately 10 min to create the enviornment, 
+ cluster, and worker nodes.
+
+ Once its completed you will have an EKS cluster that you can review using the AWS console or CLI.  You can also remotely access your VPC using
+ Amazon WorkSpaces, VPN, or similar means.  Using the `kubectl` client you should then see something similar to:
+
+ ```bash
+ [ec2-user@ip-10-10-40-207 ~]$ kubectl get nodes
+NAME                                          STATUS   ROLES    AGE   VERSION
+ip-10-0-2-186.eu-central-1.compute.internal   Ready    <none>   45m   v1.13.8-eks-cd3eb0
+ip-10-0-4-219.eu-central-1.compute.internal   Ready    <none>   45m   v1.13.8-eks-cd3eb0
+ip-10-0-8-46.eu-central-1.compute.internal    Ready    <none>   45m   v1.13.8-eks-cd3eb0
+[ec2-user@ip-10-10-40-207 ~]$ kubectl get ds -n kube-system
+NAME         DESIRED   CURRENT   READY   UP-TO-DATE   AVAILABLE   NODE SELECTOR   AGE
+aws-node     3         3         3       3            3           <none>          52m
+kube-proxy   3         3         3       3            3           <none>          52m
+```
+
+There you go - you now have an EKS cluster in a private VPC!
+
 ## Development notes
 ### configure proxy for docker daemon
 https://stackoverflow.com/questions/23111631/cannot-download-docker-images-behind-a-proxy
