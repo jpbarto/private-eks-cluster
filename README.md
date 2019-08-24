@@ -1,9 +1,24 @@
 # private-eks-cluster
+
 CloudFormation template and associated shell script to create a VPC, an EKS cluster, and a worker node group all without internet connectivity.
-# configure proxy for docker daemon
+
+## Overview
+
+This collection of CloudFormation templates and Bash shell scripts will deploy an EKS cluster into a VPC with no IGW or NAT Gateway attached.  
+To do this it will create a VPC which has VPC endpoints configured for EC2 and ECR.  It will also create a VPC endpoint to a web proxy that you 
+expose via an Endpoint service.  **Note**: this is not required for a private EKS cluster but its assumed you'll want to pull containers from 
+Docker Hub, GCR.io, etc so the proxy server is configured.
+
+With the VPC environment and permissions prepared the shell script will provision an EKS cluster with logging enabled and no public endpoint.
+
+Next it will deploy an autoscaling group into the VPC to connect to the EKS cluster.  Once completed you can (from within the VPC) communicate
+with your EKS cluster and see a list of running worker nodes.
+
+## Development notes
+### configure proxy for docker daemon
 https://stackoverflow.com/questions/23111631/cannot-download-docker-images-behind-a-proxy
 
-# authenticate with ECR
+### authenticate with ECR
 https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html#registry_auth
 
 aws ecr get-login --region eu-west-1 --no-include-email
@@ -17,7 +32,7 @@ https://github.com/awslabs/amazon-ecr-credential-helper/issues/117
 
 Setting aws-node to pull image only if image is not present found success
 
-## Procedure
+### Procedure
 
 1. Create a VPC with only private subnets
 1. Create VPC endpoints for dkr.ecr, ecr, ec2, s3
@@ -36,17 +51,21 @@ kubectl apply -f aws-auth-cm.yaml
 
 
 **Note** EKS AMI list is at https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html
-**Note** Instructions to grant worker nodes access to the cluster https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html
 
+**Note** Instructions to grant worker nodes access to the cluster https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html
 
 /etc/systemd/system/kubelet.service.d/http-proxy.conf
 [Service]
-Environment="https_proxy=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"Environment="HTTPS_PROXY=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"Environment="http_proxy=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
-Environment="HTTP_PROXY=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
-Environment="NO_PROXY=169.254.169.254,2FDA9E47AA4491779F1DF905AEFCB647.yl4.eu-west-1.eks.amazonaws.com,ec2.eu-west-1.amazonaws.com"
+Environment="https_proxy=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
+Environment="HTTPS_PROXY=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
+Environment="http_proxy=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
+Environment="HTTP_PROXY=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
+Environment="NO_PROXY=169.254.169.254,2FDA1234AA4491779F1DF905AEFCB647.yl4.eu-west-1.eks.amazonaws.com,ec2.eu-west-1.amazonaws.com"
 
 /usr/lib/systemd/system/docker.service.d/http-proxy.conf
 [Service]
-Environment="https_proxy=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"Environment="HTTPS_PROXY=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"Environment="http_proxy=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
-Environment="HTTP_PROXY=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
-Environment="NO_PROXY=169.254.169.254,2FDA9E47AA4491779F1DF905AEFCB647.yl4.eu-west-1.eks.amazonaws.com,ec2.eu-west-1.amazonaws.com"
+Environment="https_proxy=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
+Environment="HTTPS_PROXY=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
+Environment="http_proxy=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
+Environment="HTTP_PROXY=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"
+Environment="NO_PROXY=169.254.169.254,2FDA1234AA4491779F1DF905AEFCB647.yl4.eu-west-1.eks.amazonaws.com,ec2.eu-west-1.amazonaws.com"
