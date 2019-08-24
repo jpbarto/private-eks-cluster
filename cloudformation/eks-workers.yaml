@@ -360,7 +360,7 @@ Resources:
           cp /tmp/http-proxy.conf /etc/systemd/system/kubelet.service.d/
           cp /tmp/http-proxy.conf /usr/lib/systemd/system/docker.service.d/
 
-          /etc/eks/bootstrap.sh ${ClusterName} --b64-cluster-ca ${ClusterCA} --apiserver-endpoint ${ClusterAPIEndpoint} ${BootstrapArguments}
+          /etc/eks/bootstrap.sh ${ClusterName} --b64-cluster-ca ${ClusterCA} --apiserver-endpoint ${ClusterAPIEndpoint} --kubelet-extra-args "--node-labels=workergroup=${NodeGroupName}" ${BootstrapArguments}
           /opt/aws/bin/cfn-signal --exit-code $? \
                    --stack  ${AWS::StackName} \
                    --resource NodeGroup  \
