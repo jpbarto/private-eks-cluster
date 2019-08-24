@@ -7,6 +7,10 @@
       Description: Prefix to prepend to named resources
       Type: String
 
+    HttpProxyServiceName:
+      Description: The name for the HTTP/S endpoint service
+      Type: String
+
   Mappings:
     SubnetConfig:
       VPC:
@@ -210,10 +214,24 @@
           - !Ref PrivateRouteTable3
         VpcId: !Ref PrivateEKSVPC
 
+    HttpProxyEndpoint:
+      Type: "AWS::EC2::VPCEndpoint"
+      Properties:
+        ServiceName: !Ref HttpProxyServiceName
+        VpcEndpointType: Interface
+        PrivateDnsEnabled: false
+        SecurityGroupIds:
+          - !GetAtt EndpointSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+          - !Ref PrivateSubnet3
+        VpcId: !Ref PrivateEKSVPC
+
     ECRAPIEndpoint:
       Type: "AWS::EC2::VPCEndpoint"
       Properties:
-        ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr"
+        ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.api"
         VpcEndpointType: Interface
         PrivateDnsEnabled: true 
         SecurityGroupIds:
@@ -298,8 +316,22 @@
       Export:
         Name: !Sub "${StackPrefix}-DefaultSecurityGroup"
 
+    MasterSecurityGroup:
+      Description: "Security Group ID for the EKS Master node"
+      Value: !GetAtt PrivateEKSVPC.DefaultSecurityGroup
+      Export:
+        Name: !Sub "${StackPrefix}-MasterSecurityGroup"
+
     EndpointClientSecurityGroup:
       Description: Security group to grant access to VPC endpoints
       Value: !GetAtt EndpointClientSecurityGroup.GroupId
       Export:
         Name: !Sub "${StackPrefix}-EndpointClientSecurityGroup"
+
+    HttpProxyUrl:
+      Description: The URL for the HTTP/S proxy
+      Value: 
+        !Sub 
+        - "http://${ProxyEndpoint}:3128"
+        - 
+          ProxyEndpoint: !Select [ 0, !GetAtt HttpProxyEndpoint.DnsEntries ]

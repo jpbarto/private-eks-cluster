@@ -35,15 +35,18 @@ Resources:
                 - "eks.amazonaws.com" 
             Action: 
               - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
       Policies:
         - 
-         PolicyName: "root"
+         PolicyName: "eks-master-node-permissions"
          PolicyDocument:
            Version: "2012-10-17"
            Statement:
               - 
                 Effect: "Allow"
-                Action: "*"
+                Action: "cloudwatch:PutMetricData"
                 Resource: "*"
 
   EKSWorkerRole:
@@ -61,15 +64,21 @@ Resources:
                 - "ec2.amazonaws.com" 
             Action: 
               - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
       Policies:
         - 
-         PolicyName: "root"
+         PolicyName: "eks-worker-node-permissions"
          PolicyDocument:
            Version: "2012-10-17"
            Statement:
               - 
                 Effect: "Allow"
-                Action: "*"
+                Action: 
+                  - "ec2:DescribeTags"
+                  - "cloudformation:SignalResource"
                 Resource: "*"
 
   EKSWorkerNodePolicy:

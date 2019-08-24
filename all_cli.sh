@@ -1,25 +1,41 @@
 #!/bin/bash
+set -e
 
-CLUSTER_NAME='ire-eks-5'
-REGION=eu-west-1
-ROLE_ARN='arn:aws:iam::776347453069:role/EKSClusterRole'
-SUBNETS='subnet-073ce7a65f7d38179,subnet-03847437c10d8ad9b,subnet-049e366af7f2c3c12'
-SECURITY_GROUPS=sg-01b8a6379dc2d5722
-WORKER_SECURITY_GROUPS=sg-01b8a6379dc2d5722
-PROXY_URL=http://vpce-000256f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128
-KEY_PAIR=jasbarto-eu-west-1-sandbox.pem
+CLUSTER_NAME='fra-eks-5'
+REGION=eu-central-1
+HTTP_PROXY_ENDPOINT_SERVICE_NAME=com.amazonaws.vpce.eu-central-1.vpce-svc-036915ed05f9700df
+KEY_PAIR=jasbarto-dev-fra
 VERSION='1.13'
-AMI_ID=ami-0199284372364b02a
+AMI_ID=ami-038bd8d3a2345061f
 INSTANCE_TYPE=t3.medium
-VPC_ID=vpc-074f02d7fd8128fcd
 
 # aws cloudformation deploy <-- create a network in which to put the EKS cluster
 # set SUBNETS, SECURITY_GROUPS, WORKER_SECURITY_GROUPS, VPC_ID appropriately
+STACK_NAME=${CLUSTER_NAME}-vpc
+aws cloudformation package \
+    --s3-bucket jasbarto-dev-frankfurt-cloudformation \
+    --output-template-file /tmp/packaged.yaml \
+    --region ${REGION} \
+    --template-file cloudformation/environment.yaml
+
+aws cloudformation deploy \
+    --template-file /tmp/packaged.yaml \
+    --region ${REGION} \
+    --stack-name ${STACK_NAME} \
+    --capabilities CAPABILITY_NAMED_IAM \
+    --parameter-overrides HttpProxyServiceName=${HTTP_PROXY_ENDPOINT_SERVICE_NAME} StackPrefix=${CLUSTER_NAME}
+
+VPC_ID=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='VPCId'].OutputValue" --output text`
+SUBNETS=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='Subnets'].OutputValue" --output text`
+ROLE_ARN=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='MasterRoleArn'].OutputValue" --output text`
+MASTER_SECURITY_GROUPS=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='MasterSecurityGroup'].OutputValue" --output text`
+WORKER_SECURITY_GROUPS=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='EndpointClientSecurityGroup'].OutputValue" --output text`
+PROXY_URL=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='HttpProxyUrl'].OutputValue" --output text`
 
 aws eks create-cluster \
     --name ${CLUSTER_NAME} \
     --role-arn ${ROLE_ARN} \
-    --resources-vpc subnetIds=${SUBNETS},securityGroupIds=${SECURITY_GROUPS},endpointPublicAccess=false,endpointPrivateAccess=true \
+    --resources-vpc subnetIds=${SUBNETS},securityGroupIds=${MASTER_SECURITY_GROUPS},endpointPublicAccess=false,endpointPrivateAccess=true \
     --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"],"enabled":true}]}' \
     --kubernetes-version ${VERSION} \
     --region ${REGION}
@@ -43,11 +59,11 @@ echo Token ${TOKEN}
 #!/bin/bash
 
 aws cloudformation deploy \
-    --template-file private-eks-worker-gen2.yaml \
+    --template-file cloudformation/eks-workers.yaml \
     --stack-name ${CLUSTER_NAME}-worker \
     --capabilities CAPABILITY_IAM \
     --region ${REGION} \
-    --parameter-overrides ClusterControlPlaneSecurityGroup=${SECURITY_GROUPS} \
+    --parameter-overrides ClusterControlPlaneSecurityGroup=${MASTER_SECURITY_GROUPS} \
     ClusterName=${CLUSTER_NAME} \
     KeyName=${KEY_PAIR} \
     NodeGroupName=${CLUSTER_NAME}-workers \

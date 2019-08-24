@@ -1,0 +1,52 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Secure ML environment template to create a complete and secure ML environment for demonstration purposes.
+
+Parameters:
+  StackPrefix:
+    Description: The prefix to be used for named resources
+    Type: String
+
+  HttpProxyServiceName:
+    Description: The name of an endpoint service serving an HTTP proxy
+    Type: String
+
+Resources: 
+  Network:
+    Type: AWS::CloudFormation::Stack
+    Properties: 
+      Parameters: 
+        StackPrefix: !Sub ${StackPrefix}-private-eks-vpc
+        HttpProxyServiceName: !Ref HttpProxyServiceName
+      TemplateURL: network.yaml
+
+  Principals:
+    Type: AWS::CloudFormation::Stack
+    Properties: 
+      Parameters: 
+        StackPrefix: !Sub ${StackPrefix}
+      TemplateURL: permissions.yaml
+
+Outputs:
+  VPCId:
+    Description: Private EKS VPC ID
+    Value: !GetAtt Network.Outputs.VPCId
+
+  Subnets:
+    Description: Private EKS Subnets
+    Value: !Join [ ",", [ !GetAtt Network.Outputs.PrivateSubnet1, !GetAtt Network.Outputs.PrivateSubnet2, !GetAtt Network.Outputs.PrivateSubnet3 ] ]
+
+  MasterRoleArn:
+    Description: ARN of the IAM role for the EKS Master
+    Value: !GetAtt Principals.Outputs.EKSMasterRoleArn
+
+  MasterSecurityGroup:
+    Description: Security group ID for the master EKS node
+    Value: !GetAtt Network.Outputs.MasterSecurityGroup
+
+  EndpointClientSecurityGroup:
+    Description: Security group ID for the client of the VPC endpoints
+    Value: !GetAtt Network.Outputs.EndpointClientSecurityGroup
+
+  HttpProxyUrl:
+    Description: HTTP/S proxy url for HTTP access beyond the local VPC
+    Value: !GetAtt Network.Outputs.HttpProxyUrl
