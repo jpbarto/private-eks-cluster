@@ -31,6 +31,10 @@ Outputs:
     Description: Private EKS VPC ID
     Value: !GetAtt Network.Outputs.VPCId
 
+  VPCCIDR:
+    Description: Private EKS VPC CIDR
+    Value: !GetAtt Network.Outputs.VPCCIDR
+
   Subnets:
     Description: Private EKS Subnets
     Value: !Join [ ",", [ !GetAtt Network.Outputs.PrivateSubnet1, !GetAtt Network.Outputs.PrivateSubnet2, !GetAtt Network.Outputs.PrivateSubnet3 ] ]
