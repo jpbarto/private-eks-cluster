@@ -17,7 +17,6 @@ PROXY_URL=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --regio
 
 ENDPOINT=`aws eks describe-cluster --name ${CLUSTER_NAME} --query 'cluster.endpoint' --output text --region ${REGION}`
 CERT_DATA=`aws eks describe-cluster --name ${CLUSTER_NAME} --query 'cluster.certificateAuthority.data' --output text --region ${REGION}`
-TOKEN=`aws eks get-token --cluster-name ${CLUSTER_NAME} --region ${REGION} | jq -r '.status.token'`
 
 echo Endpoint ${ENDPOINT}
 echo Certificate ${CERT_DATA}
@@ -27,6 +26,8 @@ echo Staging kubectl to S3
 curl -sLO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
 aws s3 cp kubectl s3://${S3_STAGING_LOCATION}/kubectl
 rm kubectl
+
+TOKEN=`aws eks get-token --cluster-name ${CLUSTER_NAME} --region ${REGION} | jq -r '.status.token'`
 
 aws cloudformation deploy \
     --template-file cloudformation/eks-workers.yaml \
