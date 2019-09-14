@@ -135,6 +135,9 @@ Parameters:
   VpcId:
     Description: The VPC of the worker instances
     Type: 'AWS::EC2::VPC::Id'
+  VpcCidr:
+    Description: The CIDR of the VPC for the worker instances
+    Type: String
   Subnets:
     Description: The subnets where workers can be created.
     Type: 'List<AWS::EC2::Subnet::Id>'
@@ -353,7 +356,7 @@ Resources:
           Environment="HTTPS_PROXY=${HttpsProxy}"
           Environment="http_proxy=${HttpsProxy}"
           Environment="HTTP_PROXY=${HttpsProxy}"
-          Environment="NO_PROXY=169.254.169.254,$CLUSTER_API_HOSTNAME,ec2.${AWS::Region}.amazonaws.com,ecr.${AWS::Region}.amazonaws.com,dkr.ecr.${AWS::Region}.amazonaws.com"
+          Environment="NO_PROXY=169.254.169.254,${VpcCidr},$CLUSTER_API_HOSTNAME,ec2.${AWS::Region}.amazonaws.com,ecr.${AWS::Region}.amazonaws.com,dkr.ecr.${AWS::Region}.amazonaws.com"
           EOF
 
           mkdir -p /usr/lib/systemd/system/docker.service.d
