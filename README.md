@@ -46,6 +46,17 @@ kube-proxy   3         3         3       3            3           <none>        
 
 There you go - you now have an EKS cluster in a private VPC!
 
+## Under the covers 
+Amazon EKS is managed upstream K8s. So all the requirements and capabilities of Kubernetes apply. This is to say that when you create an EKS 
+cluster you are given either a private or public (or both) K8s master mode, managed for you as a service. When you create EC2 instances, 
+hopefully as part of an auto scaling group, those nodes will need to be able to authenticate into the K8s master node and begun becoming 
+managed by the master. The node runs the standard Kubelet and Docker daemon and will need the master's name and CA certificate. To do thus 
+the Kubelet will query the EKS service or you can provide these as arguments to the bootstrap.sh. After connecting to the master it will 
+receive instruction to launch daemon sets. To do this Kubelet and Docker will need to authenticate themselves into ECR wherethe DS images are 
+probably kept. Please note that the 1.13 version of Kubelet is compatible with VPC endpoints for ECR but 1.11 and 1.12 will require a proxy 
+server to reach ecr.REGION.amazonaws.com.  After pulling down the daemon sets your cluster should be stable and ready for use. For details 
+about configuring proxy servers for Kubelet etc please check out the source code. 
+
 ## Development notes
 ### configure proxy for docker daemon
 https://stackoverflow.com/questions/23111631/cannot-download-docker-images-behind-a-proxy
