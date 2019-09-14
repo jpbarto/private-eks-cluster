@@ -8,6 +8,7 @@ source variables.sh
 STACK_NAME=${CLUSTER_NAME}-vpc
 
 VPC_ID=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='VPCId'].OutputValue" --output text`
+VPC_CIDR=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='VPCCIDR'].OutputValue" --output text`
 SUBNETS=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='Subnets'].OutputValue" --output text`
 ROLE_ARN=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='MasterRoleArn'].OutputValue" --output text`
 MASTER_SECURITY_GROUPS=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='MasterSecurityGroup'].OutputValue" --output text`
@@ -40,6 +41,7 @@ aws cloudformation deploy \
     NodeInstanceType=${INSTANCE_TYPE} \
     Subnets=${SUBNETS} \
     VpcId=${VPC_ID} \
+    VpcCidr=${VPC_CIDR} \
     ClusterAPIEndpoint=${ENDPOINT} \
     ClusterCA=${CERT_DATA} \
     HttpsProxy=${PROXY_URL} \
