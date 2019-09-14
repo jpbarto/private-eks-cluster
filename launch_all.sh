@@ -42,4 +42,13 @@ do
 done
 echo Cluster ${CLUSTER_NAME} is ACTIVE
 
+ISSUER_URL=$(aws eks describe-cluster --name $CLUSTER_NAME --query cluster.identity.oidc.issuer --output text --region $REGION)
+AWS_FINGERPRINT=9E99A48A9960B14926BB7F3B02E22DA2B0AB7280
+
+aws iam create-open-id-connect-provider \
+    --url $ISSUER_URL \
+    --thumbprint-list $AWS_FINGERPRINT \
+    --client-id-list sts.amazonaws.com
+echo Registered OpenID Connect provider with IAM
+
 source launch_workers.sh

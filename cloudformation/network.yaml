@@ -292,6 +292,12 @@
       Export:
         Name: !Sub "${StackPrefix}-PrivateEKSVPC"
 
+    VPCCIDR:
+      Description: "VPC CIDR block"
+      Value: !GetAtt PrivateEKSVPC.CidrBlock
+      Export:
+        Name: !Sub "${StackPrefix}-PrivateEKSVPCCIDR"
+
     PrivateSubnet1:
       Description: "SubnetId of private subnet 0"
       Value: !Ref PrivateSubnet1
@@ -334,4 +340,4 @@
         !Sub 
         - "http://${ProxyEndpoint}:3128"
         - 
-          ProxyEndpoint: !Select [ 0, !GetAtt HttpProxyEndpoint.DnsEntries ]
+          ProxyEndpoint: !Select [ 1, !Split [ ":", !Select [ 0, !GetAtt HttpProxyEndpoint.DnsEntries ] ] ]

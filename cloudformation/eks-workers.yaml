@@ -361,6 +361,15 @@ Resources:
           cp /tmp/http-proxy.conf /usr/lib/systemd/system/docker.service.d/
 
           /etc/eks/bootstrap.sh ${ClusterName} --b64-cluster-ca ${ClusterCA} --apiserver-endpoint ${ClusterAPIEndpoint} --kubelet-extra-args "--node-labels=workergroup=${NodeGroupName}" ${BootstrapArguments}
+
+          systemctl daemon-reload
+          systemctl restart docker
+
+          yum install -y iptables-services
+          iptables --insert FORWARD 1 --in-interface eni+ --destination 169.254.169.254/32 --jump DROP
+          iptables-save | tee /etc/sysconfig/iptables 
+          systemctl enable --now iptables
+
           /opt/aws/bin/cfn-signal --exit-code $? \
                    --stack  ${AWS::StackName} \
                    --resource NodeGroup  \
