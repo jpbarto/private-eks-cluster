@@ -299,7 +299,7 @@
         Name: !Sub "${StackPrefix}-PrivateEKSVPCCIDR"
 
     PrivateSubnet1:
-      Description: "SubnetId of private subnet 0"
+      Description: "SubnetId of private subnet 1"
       Value: !Ref PrivateSubnet1
       Export:
         Name: !Sub "${StackPrefix}-PrivateSubnet1"
