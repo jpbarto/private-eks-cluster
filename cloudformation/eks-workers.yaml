@@ -350,14 +350,6 @@ Resources:
             /tmp/kubectl apply -f /tmp/aws-auth-cm.yaml
           fi
 
-          cat <<EOF >/etc/sysconfig/docker
-          export https_proxy=${HttpsProxy}
-          export HTTPS_PROXY=${HttpsProxy}
-          export http_proxy=${HttpsProxy}
-          export HTTP_PROXY=${HttpsProxy}
-          export NO_PROXY=169.254.169.254,${VpcCidr},$CLUSTER_API_HOSTNAME,s3.amazonaws.com,ec2.${AWS::Region}.amazonaws.com,ecr.${AWS::Region}.amazonaws.com,dkr.ecr.${AWS::Region}.amazonaws.com
-          EOF
-
           cat <<EOF >/tmp/http-proxy.conf
           [Service]
           Environment="https_proxy=${HttpsProxy}"
