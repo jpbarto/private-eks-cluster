@@ -202,6 +202,10 @@
             FromPort: 443
             ToPort: 443
             SourceSecurityGroupId: !GetAtt EndpointClientSecurityGroup.GroupId
+          - IpProtocol: tcp
+            FromPort: 3128
+            ToPort: 3128
+            SourceSecurityGroupId: !GetAtt EndpointClientSecurityGroup.GroupId
 
     S3APIEndpoint:
       Type: "AWS::EC2::VPCEndpoint"
