@@ -321,7 +321,7 @@ Resources:
 
           CLUSTER_API_HOSTNAME=`basename ${ClusterAPIEndpoint}`
 
-          aws s3 cp ${KubectlS3Location} /tmp/kubectl
+          aws s3 cp ${KubectlS3Location} /tmp/kubectl --region ${AWS::Region}
           chmod 755 /tmp/kubectl
 
           /tmp/kubectl config set-cluster cfc --server=${ClusterAPIEndpoint}
