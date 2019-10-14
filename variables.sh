@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 
 CLUSTER_NAME='private-eks-cluster'
-REGION=eu-central-1
-HTTP_PROXY_ENDPOINT_SERVICE_NAME=com.amazonaws.vpce.eu-central-1.vpce-svc-012345ed05f9700df
-KEY_PAIR=MY-EC2-KEYPAIR
-VERSION='1.13'
-AMI_ID=ami-038bd8d3a2345061f
-INSTANCE_TYPE=t3.medium
-S3_STAGING_LOCATION=MY-BUCKET/MY/PREFIX
+REGION=us-west-2
+HTTP_PROXY_ENDPOINT_SERVICE_NAME=com.amazonaws.vpce.us-west-2.vpce-svc-099d440360d6c276e
+KEY_PAIR=my-ec2-keypair
+VERSION='1.14'
+AMI_ID=ami-05d586e6f773f6abf
+INSTANCE_TYPE=t3.xlarge
+S3_STAGING_LOCATION=s3-bucket-of-cloudformation
+ENABLE_PUBLIC_ACCESS=false

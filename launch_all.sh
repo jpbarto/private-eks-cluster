@@ -29,7 +29,7 @@ PROXY_URL=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --regio
 aws eks create-cluster \
     --name ${CLUSTER_NAME} \
     --role-arn ${ROLE_ARN} \
-    --resources-vpc subnetIds=${SUBNETS},securityGroupIds=${MASTER_SECURITY_GROUPS},endpointPublicAccess=false,endpointPrivateAccess=true \
+    --resources-vpc subnetIds=${SUBNETS},securityGroupIds=${MASTER_SECURITY_GROUPS},endpointPublicAccess=${ENABLE_PUBLIC_ACCESS},endpointPrivateAccess=true \
     --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"],"enabled":true}]}' \
     --kubernetes-version ${VERSION} \
     --region ${REGION}
