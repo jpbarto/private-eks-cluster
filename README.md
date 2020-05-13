@@ -34,6 +34,17 @@ These variables are:
  - FARGATE_PROFILE_NAME - the name for the Fargate profile for running EKS pods on Fargate
  - FARGATE_NAMESPACE - the namespace to match pods to for running EKS pods on Fargate. You must also create this inside the cluster with 'kubectl create namespace fargate' and then launch the pod into that namespace for Fargate to be the target
 
+If you do not have a proxy already configured you can use the cloudformation/proxy.yaml template provided which is a modified version of the template from this guide:
+https://aws.amazon.com/blogs/security/how-to-add-dns-filtering-to-your-nat-instance-with-squid/
+This will setup a squid proxy in it's own VPC that you can use, along with a VPC endpoint service and test instance. The template can take a parameter: "whitelistedDomains" - a list of whitelisted domains separated by a comma for the proxy whitelist. This is refreshed on a regular basis, so modifying directly on the EC2 instance is not advised.
+```
+aws cloudformation create-stack --stack-name filtering-proxy --template-body file://cloudformation/proxy.yaml --capabilities CAPABILITY_IAM
+export ACCOUNT_ID=$(aws sts get-caller-identity --output json | jq -r '.Account')
+export HTTP_PROXY_ENDPOINT_SERVICE_NAME=$(aws ec2 describe-vpc-endpoint-services --output json | jq -r '.ServiceDetails[] | select(.Owner==env.ACCOUNT_ID) | .ServiceName')
+echo $HTTP_PROXY_ENDPOINT_SERVICE_NAME
+```
+After, enter the output of the proxy endpoint service name into the `variables.sh` file.
+
  Once these values are set you can execute `launch_all.sh` and get a coffee. This will take approximately 10 min to create the vpc, endpoints, cluster, and worker nodes.
 
  After this is completed you will have an EKS cluster that you can review using the AWS console or CLI. You can also remotely access your VPC using an Amazon WorkSpaces, VPN, or similar means. Using the `kubectl` client you should then see something similar to:
