@@ -302,6 +302,20 @@
           - !Ref PrivateSubnet3
         VpcId: !Ref PrivateEKSVPC
 
+    STSEndpoint:
+      Type: "AWS::EC2::VPCEndpoint"
+      Properties:
+        ServiceName: !Sub "com.amazonaws.${AWS::Region}.sts"
+        VpcEndpointType: Interface
+        PrivateDnsEnabled: true
+        SecurityGroupIds:
+          - !GetAtt EndpointSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+          - !Ref PrivateSubnet3
+        VpcId: !Ref PrivateEKSVPC
+
   Outputs:
 
     VPCId:
