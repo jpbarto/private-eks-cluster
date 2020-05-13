@@ -13,6 +13,7 @@ To do this it will create:
 - IAM Permissions
 - EKS Cluster - logging enabled and no public endpoint
 - Auto-scaling Group for Node group - including bootstrap configuration for the proxy
+- Fargate Profile for running containers on Fargate
 
 Once completed you can (from within the VPC) communicate with your EKS cluster and see a list of running worker nodes.
 
@@ -29,6 +30,9 @@ These variables are:
  - AMI_ID - the region-specific AWS EKS worker AMI to use. (See here for the list of managed AMIs)[https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html]
  - INSTANCE_TYPE - the instance type to be used for the worker nodes
  - S3_STAGING_LOCATION - an existing S3 bucket name and optional prefix to which CloudFormation templates and a kubectl binary will be uploaded
+ - ENABLE_FARGATE - set to 'true' to enable fargate support, disabled by default as this requires the proxy to be a transparent proxy 
+ - FARGATE_PROFILE_NAME - the name for the Fargate profile for running EKS pods on Fargate
+ - FARGATE_NAMESPACE - the namespace to match pods to for running EKS pods on Fargate. You must also create this inside the cluster with 'kubectl create namespace fargate' and then launch the pod into that namespace for Fargate to be the target
 
  Once these values are set you can execute `launch_all.sh` and get a coffee. This will take approximately 10 min to create the vpc, endpoints, cluster, and worker nodes.
 
