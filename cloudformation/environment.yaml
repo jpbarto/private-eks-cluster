@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: Secure ML environment template to create a complete and secure ML environment for demonstration purposes.
+Description: EKS environment template to create a completely private environment.
 
 Parameters:
   StackPrefix:
