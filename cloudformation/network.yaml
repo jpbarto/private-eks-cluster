@@ -316,6 +316,34 @@
           - !Ref PrivateSubnet3
         VpcId: !Ref PrivateEKSVPC
 
+    SSMEndpoint:
+      Type: "AWS::EC2::VPCEndpoint"
+      Properties:
+        ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+        VpcEndpointType: Interface
+        PrivateDnsEnabled: true
+        SecurityGroupIds:
+          - !GetAtt EndpointSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+          - !Ref PrivateSubnet3
+        VpcId: !Ref PrivateEKSVPC
+
+    SSMMessagesEndpoint:
+      Type: "AWS::EC2::VPCEndpoint"
+      Properties:
+        ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+        VpcEndpointType: Interface
+        PrivateDnsEnabled: true
+        SecurityGroupIds:
+          - !GetAtt EndpointSecurityGroup.GroupId
+        SubnetIds:
+          - !Ref PrivateSubnet1
+          - !Ref PrivateSubnet2
+          - !Ref PrivateSubnet3
+        VpcId: !Ref PrivateEKSVPC
+
   Outputs:
 
     VPCId:
