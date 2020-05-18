@@ -9,8 +9,8 @@ if [[ $(aws s3 ls | grep ${S3_STAGING_LOCATION}) ]]; then
 else
     aws s3api create-bucket \
         --bucket ${S3_STAGING_LOCATION} \
-        --create-bucket-configuration LocationConstraint=$(aws configure get region) \
-        --region $(aws configure get region)
+        --create-bucket-configuration LocationConstraint=${REGION} \
+        --region ${REGION}
     echo "Created S3 bucket ${S3_STAGING_LOCATION} for cloudformation and kubectl binary"
 fi
 
