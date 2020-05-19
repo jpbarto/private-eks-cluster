@@ -35,11 +35,17 @@ SUBNETS=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region 
 ROLE_ARN=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='MasterRoleArn'].OutputValue" --output text`
 MASTER_SECURITY_GROUPS=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='MasterSecurityGroup'].OutputValue" --output text`
 WORKER_SECURITY_GROUPS=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='EndpointClientSecurityGroup'].OutputValue" --output text`
-PROXY_URL=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='HttpProxyUrl'].OutputValue" --output text`
+EKS_CLUSTER_KMS_ARN=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='MasterKeyArn'].OutputValue" --output text`
+PROXY_URL=${HTTP_PROXY_ENDPOINT_SERVICE_NAME}
+if [ "${HTTP_PROXY_ENDPOINT_SERVICE_NAME}" != "" ]
+then
+    PROXY_URL=`aws cloudformation describe-stacks --stack-name ${STACK_NAME} --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='HttpProxyUrl'].OutputValue" --output text`
+fi
 
 aws eks create-cluster \
     --name ${CLUSTER_NAME} \
     --role-arn ${ROLE_ARN} \
+    --encryption-config resources=secrets,provider={keyArn=${EKS_CLUSTER_KMS_ARN}} \
     --resources-vpc subnetIds=${SUBNETS},securityGroupIds=${MASTER_SECURITY_GROUPS},endpointPublicAccess=${ENABLE_PUBLIC_ACCESS},endpointPrivateAccess=true \
     --logging '{"clusterLogging":[{"types":["api","audit","authenticator","controllerManager","scheduler"],"enabled":true}]}' \
     --kubernetes-version ${VERSION} \
@@ -62,9 +68,9 @@ aws iam create-open-id-connect-provider \
     --client-id-list sts.amazonaws.com
 echo Registered OpenID Connect provider with IAM
 
-source launch_workers.sh
-
-# Build kubeconfig
+# Update Kubeconfig with new cluster details
 aws eks --region ${REGION} \
 	update-kubeconfig \
 	--name ${CLUSTER_NAME}
+
+source launch_workers.sh

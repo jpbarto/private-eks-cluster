@@ -49,6 +49,32 @@ Resources:
                 Action: "cloudwatch:PutMetricData"
                 Resource: "*"
 
+  EKSMasterKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Key for encrypting EKS secrets
+      KeyPolicy:
+        Version: '2012-10-17'
+        Statement:
+        - Sid: Enable IAM User Permissions
+          Effect: Allow
+          Principal:
+            AWS: !Sub 'arn:aws:iam::${AWS::AccountId}:root'
+          Action: kms:*
+          Resource: '*'
+        - Sid: Allow use of the key
+          Effect: Allow
+          Principal:
+            AWS: !GetAtt EKSMasterRole.Arn
+          Action:
+          - kms:DescribeKey
+          - kms:Encrypt
+          - kms:Decrypt
+          - kms:ReEncrypt*
+          - kms:GenerateDataKey
+          - kms:GenerateDataKeyWithoutPlaintext
+          Resource: '*'
+
   EKSWorkerRole:
     Type: AWS::IAM::Role
     Properties:
@@ -103,6 +129,11 @@ Outputs:
     Value: !GetAtt EKSMasterRole.Arn
     Export:
       Name: !Sub "${StackPrefix}-EnvironmentAdministratorRoleArn"
+  EKSMasterKeyArn:
+    Description: ARN of KMS key for encrypting EKS secrets 
+    Value: !GetAtt EKSMasterKey.Arn
+    Export:
+      Name: !Sub "${StackPrefix}-EKSMasterKeyArn"
   EKSWorkerRoleArn:
     Description: Role to be used by SageMaker provisioned infrastructure
     Value: !GetAtt EKSWorkerRole.Arn

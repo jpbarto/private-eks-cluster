@@ -46,6 +46,10 @@ Outputs:
     Description: ARN of the IAM role for the EKS Master
     Value: !GetAtt Principals.Outputs.EKSMasterRoleArn
 
+  MasterKeyArn:
+    Description: ARN of the KMS key for encrypting EKS secrets 
+    Value: !GetAtt Principals.Outputs.EKSMasterKeyArn
+
   MasterSecurityGroup:
     Description: Security group ID for the master EKS node
     Value: !GetAtt Network.Outputs.MasterSecurityGroup
