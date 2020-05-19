@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 
-CLUSTER_NAME='private-eks-cluster'
-REGION=us-west-2
-HTTP_PROXY_ENDPOINT_SERVICE_NAME=com.amazonaws.vpce.us-west-2.vpce-svc-099d440360d6c276e
-KEY_PAIR=my-ec2-keypair
+CLUSTER_NAME='priv-fra-eks-cluster'
+REGION=eu-central-1
+HTTP_PROXY_ENDPOINT_SERVICE_NAME=""
+KEY_PAIR=jasbarto-dev-frankfurt
 VERSION='1.16'
-AMI_ID=ami-0809659d79ce80260
+AMI_ID=ami-0bf7306240d09dcdd
 INSTANCE_TYPE=t3.xlarge
-S3_STAGING_LOCATION=s3-bucket-of-cloudformation
+S3_STAGING_LOCATION=jasbarto-dev-frankfurt-cfn
 ENABLE_PUBLIC_ACCESS=false

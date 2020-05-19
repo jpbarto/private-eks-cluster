@@ -10,6 +10,9 @@ Parameters:
     Description: The name of an endpoint service serving an HTTP proxy
     Type: String
 
+Conditions:
+  CreateProxyEndpoint: !Not [ !Equals [ !Ref HttpProxyServiceName, "" ]]
+
 Resources: 
   Network:
     Type: AWS::CloudFormation::Stack
@@ -52,5 +55,6 @@ Outputs:
     Value: !GetAtt Network.Outputs.EndpointClientSecurityGroup
 
   HttpProxyUrl:
+    Condition: CreateProxyEndpoint
     Description: HTTP/S proxy url for HTTP access beyond the local VPC
     Value: !GetAtt Network.Outputs.HttpProxyUrl

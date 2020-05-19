@@ -52,6 +52,9 @@
       us-west-2:
         AZs: ["a", "b", "c"]
 
+  Conditions:
+    CreateProxyEndpoint: !Not [ !Equals [ !Ref HttpProxyServiceName, "" ]]
+
   Resources:
 
     PrivateEKSVPC:
@@ -220,6 +223,7 @@
 
     HttpProxyEndpoint:
       Type: "AWS::EC2::VPCEndpoint"
+      Condition: CreateProxyEndpoint
       Properties:
         ServiceName: !Ref HttpProxyServiceName
         VpcEndpointType: Interface
@@ -396,6 +400,7 @@
 
     HttpProxyUrl:
       Description: The URL for the HTTP/S proxy
+      Condition: CreateProxyEndpoint
       Value: 
         !Sub 
         - "http://${ProxyEndpoint}:3128"
