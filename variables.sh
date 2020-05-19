@@ -9,3 +9,6 @@ AMI_ID=ami-0bf7306240d09dcdd
 INSTANCE_TYPE=t3.xlarge
 S3_STAGING_LOCATION=jasbarto-dev-frankfurt-cfn
 ENABLE_PUBLIC_ACCESS=false
+ENABLE_FARGATE=false
+FARGATE_PROFILE_NAME=PrivateFargateProfile
+FARGATE_NAMESPACE=fargate
