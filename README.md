@@ -4,33 +4,50 @@ CloudFormation template and associated shell script to create a VPC, an EKS clus
 
 ## Overview
 
-This collection of CloudFormation templates and Bash shell scripts will deploy an EKS cluster into a VPC with no IGW or NAT Gateway attached.  
-To do this it will create a VPC which has VPC endpoints configured for EC2 and ECR.  It will also create a VPC endpoint to a web proxy that you 
-expose via an Endpoint service.  **Note**: this is not required for a private EKS cluster but its assumed you'll want to pull containers from 
-Docker Hub, GCR.io, etc so the proxy server is configured.
+This collection of CloudFormation templates and Bash shell scripts will deploy an EKS cluster into a VPC with no Internet Gateway (IGW) or NAT Gateway attached.
 
-With the VPC environment and permissions prepared the shell script will provision an EKS cluster with logging enabled and no public endpoint.
+To do this it will create:
+- VPC
+- VPC endpoints - for EC2, ECR, STS, AutoScaling, SSM
+- VPC endpoint for Proxy - to an existing web proxy that you have already setup (not required but assumed you want to pull containers from DockerHub, GCR.io etc)
+- IAM Permissions
+- EKS Cluster - logging enabled and no public endpoint
+- Auto-scaling Group for Node group - including bootstrap configuration for the proxy
+- Fargate Profile for running containers on Fargate
 
-Next it will deploy an autoscaling group into the VPC to connect to the EKS cluster.  Once completed you can (from within the VPC) communicate
-with your EKS cluster and see a list of running worker nodes.
+Once completed you can (from within the VPC) communicate with your EKS cluster and see a list of running worker nodes.
 
 ## Getting started
 
-You should only need to edit the variable definitions found in `variables.sh`.  The variables are:
- - CLUSTER_NAME, the desired name of the EKS cluster
- - REGION, the AWS region in which you want resources created
- - HTTP_PROXY_ENDPOINT_SERVICE_NAME, this is the name of a VPC endpoint service you created which represents an HTTP proxy
- - KEY_PAIR, the name of an EC2 key pair to be used as an SSH key on the worker nodes
- - VERSION, the EKS version you wish to create ('1.13', '1.12', or '1.11')
- - AMI_ID, the region-specific AWS EKS worker AMI to use.  See below for a link to the AWS documentation listing all managed AMIs.
- - INSTANCE_TYPE, the instance type to be used for the worker nodes
- - S3_STAGING_LOCATION, an S3 bucket name and optional prefix to which CloudFormation templates and a kubectl binary will be uploaded
+Edit the variable definitions found in `variables.sh`.
 
- Once these values are set you can execute `launch_all.sh` and get a coffee.  This will take approximately 10 min to create the enviornment, 
- cluster, and worker nodes.
+These variables are:
+ - CLUSTER_NAME - your desired EKS cluster name
+ - REGION - the AWS region in which you want the resources created
+ - HTTP_PROXY_ENDPOINT_SERVICE_NAME - this is the name of a VPC endpoint service you must have previously created which represents an HTTP proxy (e.g. Squid)
+ - KEY_PAIR - the name of an existing EC2 key pair to be used as an SSH key on the worker nodes
+ - VERSION - the EKS version you wish to create ('1.16', '1.15', '1.14' etc)
+ - AMI_ID - the region-specific AWS EKS worker AMI to use. (See here for the list of managed AMIs)[https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html]
+ - INSTANCE_TYPE - the instance type to be used for the worker nodes
+ - S3_STAGING_LOCATION - an existing S3 bucket name and optional prefix to which CloudFormation templates and a kubectl binary will be uploaded
+ - ENABLE_FARGATE - set to 'true' to enable fargate support, disabled by default as this requires the proxy to be a transparent proxy 
+ - FARGATE_PROFILE_NAME - the name for the Fargate profile for running EKS pods on Fargate
+ - FARGATE_NAMESPACE - the namespace to match pods to for running EKS pods on Fargate. You must also create this inside the cluster with 'kubectl create namespace fargate' and then launch the pod into that namespace for Fargate to be the target
 
- Once its completed you will have an EKS cluster that you can review using the AWS console or CLI.  You can also remotely access your VPC using
- Amazon WorkSpaces, VPN, or similar means.  Using the `kubectl` client you should then see something similar to:
+If you do not have a proxy already configured you can use the cloudformation/proxy.yaml template provided which is a modified version of the template from this guide:
+https://aws.amazon.com/blogs/security/how-to-add-dns-filtering-to-your-nat-instance-with-squid/
+This will setup a squid proxy in it's own VPC that you can use, along with a VPC endpoint service and test instance. The template can take a parameter: "whitelistedDomains" - a list of whitelisted domains separated by a comma for the proxy whitelist. This is refreshed on a regular basis, so modifying directly on the EC2 instance is not advised.
+```
+aws cloudformation create-stack --stack-name filtering-proxy --template-body file://cloudformation/proxy.yaml --capabilities CAPABILITY_IAM
+export ACCOUNT_ID=$(aws sts get-caller-identity --output json | jq -r '.Account')
+export HTTP_PROXY_ENDPOINT_SERVICE_NAME=$(aws ec2 describe-vpc-endpoint-services --output json | jq -r '.ServiceDetails[] | select(.Owner==env.ACCOUNT_ID) | .ServiceName')
+echo $HTTP_PROXY_ENDPOINT_SERVICE_NAME
+```
+After, enter the output of the proxy endpoint service name into the `variables.sh` file.
+
+ Once these values are set you can execute `launch_all.sh` and get a coffee. This will take approximately 10 min to create the vpc, endpoints, cluster, and worker nodes.
+
+ After this is completed you will have an EKS cluster that you can review using the AWS console or CLI. You can also remotely access your VPC using an Amazon WorkSpaces, VPN, or similar means. Using the `kubectl` client you should then see something similar to:
 
  ```bash
  [ec2-user@ip-10-10-40-207 ~]$ kubectl get nodes
@@ -46,16 +63,9 @@ kube-proxy   3         3         3       3            3           <none>        
 
 There you go - you now have an EKS cluster in a private VPC!
 
-## Under the covers 
-Amazon EKS is managed upstream K8s. So all the requirements and capabilities of Kubernetes apply. This is to say that when you create an EKS 
-cluster you are given either a private or public (or both) K8s master mode, managed for you as a service. When you create EC2 instances, 
-hopefully as part of an auto scaling group, those nodes will need to be able to authenticate into the K8s master node and begun becoming 
-managed by the master. The node runs the standard Kubelet and Docker daemon and will need the master's name and CA certificate. To do thus 
-the Kubelet will query the EKS service or you can provide these as arguments to the bootstrap.sh. After connecting to the master it will 
-receive instruction to launch daemon sets. To do this Kubelet and Docker will need to authenticate themselves into ECR wherethe DS images are 
-probably kept. Please note that the 1.13 version of Kubelet is compatible with VPC endpoints for ECR but 1.11 and 1.12 will require a proxy 
-server to reach ecr.REGION.amazonaws.com.  After pulling down the daemon sets your cluster should be stable and ready for use. For details 
-about configuring proxy servers for Kubelet etc please check out the source code. 
+## Under the covers
+
+Amazon EKS is managed upstream K8s. So all the requirements and capabilities of Kubernetes apply. This is to say that when you create an EKS cluster you are given either a private or public (or both) K8s master mode, managed for you as a service. When you create EC2 instances, hopefully as part of an auto scaling group, those nodes will need to be able to authenticate into the K8s master node and begun becoming managed by the master. The node runs the standard Kubelet and Docker daemon and will need the master's name and CA certificate. To do thus the Kubelet will query the EKS service or you can provide these as arguments to the bootstrap.sh. After connecting to the master it will receive instruction to launch daemon sets. To do this Kubelet and Docker will need to authenticate themselves into ECR wherethe DS images are probably kept. Please note that the 1.13 version of Kubelet is compatible with VPC endpoints for ECR but 1.11 and 1.12 will require a proxy server to reach ecr.REGION.amazonaws.com. After pulling down the daemon sets your cluster should be stable and ready for use. For details about configuring proxy servers for Kubelet etc please check out the source code.
 
 ## Development notes
 ### configure proxy for docker daemon
@@ -70,7 +80,7 @@ aws ecr get-login --region eu-west-1 --no-include-email
 602401143452.dkr.ecr.eu-west-1.amazonaws.com/eks/coredns:v1.1.3
 602401143452.dkr.ecr.eu-west-1.amazonaws.com/eks/pause-amd64:3.1
 
-Docker unable to authenitcate with ECR, couldn't get docker credential helper to work
+Docker unable to authenticate with ECR, couldn't get docker credential helper to work
 https://github.com/awslabs/amazon-ecr-credential-helper/issues/117
 
 Setting aws-node to pull image only if image is not present found success
@@ -91,7 +101,6 @@ kubectl edit ds/aws-node -n kube-system
 kubectl apply -f aws-auth-cm.yaml
 ```
 1. profit
-
 
 **Note** EKS AMI list is at https://docs.aws.amazon.com/eks/latest/userguide/eks-optimized-ami.html
 

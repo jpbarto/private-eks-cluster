@@ -49,3 +49,25 @@ aws cloudformation deploy \
     WorkerSecurityGroup=${WORKER_SECURITY_GROUPS} \
     UserToken=${TOKEN} \
     KubectlS3Location="s3://${S3_STAGING_LOCATION}/kubectl"
+
+# Add optional support for EKS on Fargate
+#  This requires you to change the private subnets route table to point directly at the proxy IPs since you cannot modify the kublet configuration on Fargate
+if [[ $ENABLE_FARGATE == "true" ]]; then
+  echo "Configuring EKS on Fargate"
+  # Deploy Fargate IAM permissions
+  aws cloudformation deploy \
+      --template-file cloudformation/fargate.yaml \
+      --stack-name ${CLUSTER_NAME}-fargate \
+      --capabilities CAPABILITY_NAMED_IAM \
+      --region ${REGION} \
+      --parameter-overrides StackPrefix=${CLUSTER_NAME}
+  FARGATE_EXEC_ROLE_ARN=`aws cloudformation describe-stacks --stack-name ${CLUSTER_NAME}-fargate --region ${REGION} --query "Stacks[0].Outputs[?OutputKey=='EKSFargatePodExecutionRoleArn'].OutputValue" --output text`
+  # Create an EKS Fargate profile - waiting on CloudFormation support: https://github.com/aws-cloudformation/aws-cloudformation-coverage-roadmap/issues/288
+  SUBNETS_LIST=`echo ${SUBNETS} | sed 's/,/ /g'`
+  aws eks create-fargate-profile \
+    --fargate-profile-name ${FARGATE_PROFILE_NAME} \
+    --cluster-name ${CLUSTER_NAME} \
+    --pod-execution-role-arn ${FARGATE_EXEC_ROLE_ARN} \
+    --subnets ${SUBNETS_LIST} \
+    --selectors namespace=${FARGATE_NAMESPACE}
+fi

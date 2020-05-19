@@ -1,0 +1,33 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: EKS on Fargate environment template to create Fargate Permissions
+
+Parameters:
+  StackPrefix:
+    Description: The prefix to be used for named resources
+    Type: String
+
+Resources:
+  EKSFargatePodExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${StackPrefix}-eks-fargate-pod-execution-role
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          -
+            Effect: "Allow"
+            Principal:
+              Service:
+                - "eks-fargate-pods.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSFargatePodExecutionRolePolicy
+
+Outputs:
+  EKSFargatePodExecutionRoleArn:
+    Description: ARN of the Fargate Pod Execution role for the Fargate Profile
+    Value: !GetAtt EKSFargatePodExecutionRole.Arn
+    Export:
+      Name: !Sub "${StackPrefix}-EKSFargatePodExecutionRoleArn"

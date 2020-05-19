@@ -63,3 +63,8 @@ aws iam create-open-id-connect-provider \
 echo Registered OpenID Connect provider with IAM
 
 source launch_workers.sh
+
+# Build kubeconfig
+aws eks --region ${REGION} \
+	update-kubeconfig \
+	--name ${CLUSTER_NAME}
