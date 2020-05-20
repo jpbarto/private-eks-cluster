@@ -346,25 +346,26 @@ Resources:
           EOF
 
           /tmp/kubectl get cm -n kube-system aws-auth
-          if [ $? -ne 0 ]; then
+          if [ $? -ne 0 ]; 
+          then
             /tmp/kubectl apply -f /tmp/aws-auth-cm.yaml
           fi
 
-          if [ "${HttpsProxy}" != "" ]
+          if [ "${HttpsProxy}" != "" ];
           then
-            cat <<EOF >/tmp/http-proxy.conf
-            [Service]
-            Environment="https_proxy=${HttpsProxy}"
-            Environment="HTTPS_PROXY=${HttpsProxy}"
-            Environment="http_proxy=${HttpsProxy}"
-            Environment="HTTP_PROXY=${HttpsProxy}"
-            Environment="NO_PROXY=169.254.169.254,${VpcCidr},$CLUSTER_API_HOSTNAME,s3.amazonaws.com,s3.${AWS::Region}.amazonaws.com,ec2.${AWS::Region}.amazonaws.com,ecr.${AWS::Region}.amazonaws.com,dkr.ecr.${AWS::Region}.amazonaws.com"
-            EOF
-          fi
-
+          cat <<EOF >/tmp/http-proxy.conf
+          [Service]
+          Environment="https_proxy=${HttpsProxy}"
+          Environment="HTTPS_PROXY=${HttpsProxy}"
+          Environment="http_proxy=${HttpsProxy}"
+          Environment="HTTP_PROXY=${HttpsProxy}"
+          Environment="NO_PROXY=169.254.169.254,${VpcCidr},$CLUSTER_API_HOSTNAME,s3.amazonaws.com,s3.${AWS::Region}.amazonaws.com,ec2.${AWS::Region}.amazonaws.com,ecr.${AWS::Region}.amazonaws.com,dkr.ecr.${AWS::Region}.amazonaws.com"
+          EOF
+          
           mkdir -p /usr/lib/systemd/system/docker.service.d
           cp /tmp/http-proxy.conf /etc/systemd/system/kubelet.service.d/
           cp /tmp/http-proxy.conf /usr/lib/systemd/system/docker.service.d/
+          fi
 
           /etc/eks/bootstrap.sh ${ClusterName} --b64-cluster-ca ${ClusterCA} --apiserver-endpoint ${ClusterAPIEndpoint} --kubelet-extra-args "--node-labels=workergroup=${NodeGroupName}" ${BootstrapArguments}
 
