@@ -45,7 +45,7 @@ if [[ $ENABLE_FARGATE == "true" ]]; then
         --pod-execution-role-arn ${FARGATE_EXEC_ROLE_ARN} \
         --subnets ${SUBNETS_LIST} \
         --selectors namespace=${FARGATE_NAMESPACE}
-else:
+else
     echo Staging kubectl to S3
     curl -sLO https://storage.googleapis.com/kubernetes-release/release/`curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt`/bin/linux/amd64/kubectl
     aws s3 cp kubectl s3://${S3_STAGING_LOCATION}/kubectl
