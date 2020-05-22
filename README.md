@@ -37,8 +37,9 @@ To solve these issues this project takes advantage of all of the flexibility the
 1. Clone this repository to a machine that has CLI access to your AWS account.
 1. Edit the values in `variables.sh`
 
-    1. Edit `CLUSTER_NAME`
-    1. Edit `REGION`
+    1. Set `CLUSTER_NAME` to be a name you choose
+    1. Set `REGION` to be an AWS region you prefer, such as us-east-2, eu-west-2, or eu-central-1
+    1. Edit `AMI_ID` to be correct for your region
 
 1. Execute `launch_all.sh`
 
@@ -88,29 +89,62 @@ kube-proxy   3         3         3       3            3           <none>        
 
 There you go - you now have an EKS cluster in a private VPC!
 
-## Under the covers
+## Code Explained
 
-Amazon EKS is managed upstream K8s. So all the requirements and capabilities of Kubernetes apply. This is to say that when you create an EKS cluster you are given either a private or public (or both) K8s master mode, managed for you as a service. When you create EC2 instances, hopefully as part of an auto scaling group, those nodes will need to be able to authenticate into the K8s master node and begun becoming managed by the master. The node runs the standard Kubelet and Docker daemon and will need the master's name and CA certificate. To do thus the Kubelet will query the EKS service or you can provide these as arguments to the bootstrap.sh. After connecting to the master it will receive instruction to launch daemon sets. To do this Kubelet and Docker will need to authenticate themselves into ECR wherethe DS images are probably kept. Please note that the 1.13 version of Kubelet is compatible with VPC endpoints for ECR but 1.11 and 1.12 will require a proxy server to reach ecr.REGION.amazonaws.com. After pulling down the daemon sets your cluster should be stable and ready for use. For details about configuring proxy servers for Kubelet etc please check out the source code.
+`variables.sh` defines key user configurable values that control how the scripts exxecute to create an EKS cluster.  These values control whether Fargate is used to host worker nodes, whether a proxy server is configured on the worker nodes, and whether you would like the EKS master node to be accessible from outside of the VPC.  
+
+`launch_all.sh` sources the values from `variables.sh` and then begins by creating an S3 bucket (if it does not already exist) to host the CloudFormation templates and kubectl binary.  With an S3 bucket in place the script then moves on to deploying the CloudFormation stack defined by `environment.yaml`.  This stack deploys 2 nested stacks, `permissions.yaml` and `network.yaml`.  
+
+`permissions.yaml` creates an IAM role for the EKS cluster, a KMS key to encrypt K8s secrets held on the EKS master node, and an IAM role for the EC2 worker nodes to be created later.
+
+`network.yaml` creates a VPC with no IGW and 3 subnets.  It also creates VPC endpoints for Amazon S3, Amazon ECR, Amazon EC2, EC2 AutoScaling, CloudWatch Logs, STS, and SSM.  If an VPC endpoint service is specified for a proxy server an VPC Endpoint will also be created to point at the proxy server.  
+
+With permissions and a network in place the `launch_all.sh` script next launches an EKS cluster using the AWS CLI.  This cluster will be configured to operate privately, with full logging to CloudWatch logs, Kubernetes secrets encrypted using a KMS key, and with the role created in the `permissions.yaml` CloudFormation template.  The script will then pause while it waits for the cluster to finish creating.
+
+Next the script will configured an OpenID Connect Provider which will be used to allow Kubernetes pods to authenticate against AWS IAM and obtain temporary credentials.  This works in a manner similar to EC2 instance profiles where containers in the pod can then reference AWS credentials as secrets using standard K8s parlance.
+
+After the EKS cluster has been created an the OIDC provider configured the script will then configure your local `kubectl` tool to communicate with the EKS cluster.  Please note this will only work if you have a network path to your EKS master node.  To have this network path you will need to be connected to your VPC over Direct Connect or VPN, or you will have to enable communication with your EKS master node from outside of the VPC.
+
+Next the script will hand control over to `launch_workers.sh` which will again read values from `variables.sh` before proceeding.
+
+`launch_workers.sh` will read values from the previous CloudFormation stack to know what VPC subnets and security groups to use.  The script will retreive the HTTPS endpoint for the EKS master node, and the CA certificate to be used during communication with the master.  It will also request a token for communicating with the EKS master node created by `launch_all.sh`.  
+
+With these values in hand the script will then launch worker nodes to run your K8s pods.  Depending on your configuration of `variables.sh` the script will either apply the `fargate.yaml` CloudFormation template and create a Fargate Profile with EKS, allowing you to run a fully serverless K8s cluster.  Or it will create an EC2 autoscaling group to create EC2 instances in your VPC that will connect with the EKS master node.
+
+To create the EC2 instances the script will first download the `kubectl` binary and store it in S3 for later retreival by the worker nodes.  It will then apply the `eks-workers.yaml` CloudFormation template.  The template will create a launch configuration and autoscaling group that will create EC2 instances to host your pods.
+
+When they first launch the EC2 worker nodes will use the CA certificate and EKS token provided to them to configure themselves and communicate with the EKS master node.  The worker nodes, using Cloud-Init user data, will apply an auth config map to the EKS master node, giving the worker nodes permission to register as worker nodes with the EKS master.  If a proxy has been configured the EC2 instance will configure Docker and Kubelet to use your HTTP proxy.  The EC2 instance will also execute the EKS bootstrap.sh script which is provided by the EKS service AMI to configure the EKS components on the system.  Lastly the EC2 instance will insert an IPTables rule that disallows pods to query the EC2 metadata service.
+
+When the CloudFormation template has been applied and the user data has executed on the EC2 worker nodes the shell script will return and you should now have a fully formed EKS cluster running privately in a VPC.
+
+## EKS Under the covers
+
+Amazon EKS is managed upstream K8s. So all the requirements and capabilities of Kubernetes apply. This is to say that when you create an EKS cluster you are given either a private or public (or both) K8s master mode, managed for you as a service. When you create EC2 instances, hopefully as part of an auto scaling group, those nodes will need to be able to authenticate into the K8s master node and be managed by the master. The node runs the standard Kubelet and Docker daemon and will need the master's name and CA certificate. To do this the Kubelet will query the EKS service or you can provide these as arguments to the bootstrap.sh. After connecting to the master it will receive instruction to launch daemon sets. To do this Kubelet and Docker will need to authenticate themselves into ECR where the DS images are probably kept. Please note that the 1.13 version of Kubelet is compatible with VPC endpoints for ECR but 1.11 and 1.12 will require a proxy server to reach ecr.REGION.amazonaws.com. After pulling down the daemon sets your cluster should be stable and ready for use. For details about configuring proxy servers for Kubelet etc please check out the source code.
 
 ## Development notes
+---
 ### configure proxy for docker daemon
 https://stackoverflow.com/questions/23111631/cannot-download-docker-images-behind-a-proxy
 
 ### authenticate with ECR
 https://docs.aws.amazon.com/AmazonECR/latest/userguide/Registries.html#registry_auth
 
+```bash
 aws ecr get-login --region eu-west-1 --no-include-email
+```
+
+### containers key to worker node operation
 602401143452.dkr.ecr.eu-west-1.amazonaws.com/amazon-k8s-cni:v1.5.0
 602401143452.dkr.ecr.eu-west-1.amazonaws.com/eks/kube-proxy:v1.11.5
 602401143452.dkr.ecr.eu-west-1.amazonaws.com/eks/coredns:v1.1.3
 602401143452.dkr.ecr.eu-west-1.amazonaws.com/eks/pause-amd64:3.1
 
-Docker unable to authenticate with ECR, couldn't get docker credential helper to work
+### Docker unable to authenticate with ECR, couldn't get docker credential helper to work
 https://github.com/awslabs/amazon-ecr-credential-helper/issues/117
 
 Setting aws-node to pull image only if image is not present found success
 
-### Procedure
+### Procedure to create a privte EKS cluster (by hand)
 
 1. Create a VPC with only private subnets
 1. Create VPC endpoints for dkr.ecr, ecr, ec2, s3
@@ -131,6 +165,7 @@ kubectl apply -f aws-auth-cm.yaml
 
 **Note** Instructions to grant worker nodes access to the cluster https://docs.aws.amazon.com/eks/latest/userguide/add-user-role.html
 
+### Sample http-proxy.conf for worker node to work with HTTP proxy 
 /etc/systemd/system/kubelet.service.d/http-proxy.conf
 [Service]
 Environment="https_proxy=http://vpce-001234f5aa16f2228-aspopn6a.vpce-svc-062e1dc8165cd99df.eu-west-1.vpce.amazonaws.com:3128"

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-CLUSTER_NAME='priv-fra-eks-cluster-01'
+CLUSTER_NAME='priv-fra-ssm-eks-cluster-01'
 REGION=eu-central-1
 HTTP_PROXY_ENDPOINT_SERVICE_NAME="" # leave blank for no proxy, or populate with a VPC endpoint ID to create a PrivateLink powered connection to a proxy server
 KEY_PAIR=jasbarto-dev-frankfurt

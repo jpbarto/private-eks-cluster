@@ -206,6 +206,7 @@ Resources:
         - 'arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy'
         - 'arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly'
         - 'arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess'
+        - 'arn:aws:iam::aws:policy/service-role/AmazonEC2RoleforSSM'
   NodeSecurityGroup:
     Type: 'AWS::EC2::SecurityGroup'
     Properties:
@@ -318,6 +319,12 @@ Resources:
           #!/bin/bash
 
           set -o xtrace
+
+          # Install the SSM Agent so we can remotely access the worker node if necessary
+          yum install -y amazon-ssm-agent 
+          systemctl enable amazon-ssm-agent
+          systemctl start amazon-ssm-agent
+          systemctl status amazon-ssm-agent
 
           CLUSTER_API_HOSTNAME=`basename ${ClusterAPIEndpoint}`
 
