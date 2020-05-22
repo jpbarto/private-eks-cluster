@@ -3,7 +3,7 @@
 CLUSTER_NAME='priv-fra-ssm-eks-cluster-01'
 REGION=eu-central-1
 HTTP_PROXY_ENDPOINT_SERVICE_NAME="" # leave blank for no proxy, or populate with a VPC endpoint ID to create a PrivateLink powered connection to a proxy server
-KEY_PAIR=jasbarto-dev-frankfurt
+KEY_PAIR=""
 VERSION='1.16' # K8s version to deploy
 AMI_ID=ami-0bf7306240d09dcdd # AWS managed AMI for EKS worker nodes
 INSTANCE_TYPE=t3.large # instance type for EKS worker nodes
