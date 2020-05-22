@@ -1,6 +1,6 @@
 # private-eks-cluster
 
-CloudFormation template and associated shell script to create a VPC, an EKS cluster, and a worker node group all without internet connectivity.
+This repository is a collection of CloudFormation templates and shell scripts to create an Amazon EKS Kubernetes cluster in an AWS Virtual Private Cloud (VPC) without any Internet connectivity.
 
 ## Overview
 
@@ -9,13 +9,38 @@ This collection of CloudFormation templates and Bash shell scripts will deploy a
 To do this it will create:
 - VPC
 - VPC endpoints - for EC2, ECR, STS, AutoScaling, SSM
-- VPC endpoint for Proxy - to an existing web proxy that you have already setup (not required but assumed you want to pull containers from DockerHub, GCR.io etc)
+- VPC endpoint for Proxy (optional) - to an existing web proxy that you have already setup (not required by EKS but assumed you want to pull containers from DockerHub, GCR.io etc)
 - IAM Permissions
-- EKS Cluster - logging enabled and no public endpoint
-- Auto-scaling Group for Node group - including bootstrap configuration for the proxy
-- Fargate Profile for running containers on Fargate
+- EKS Cluster - logging enabled, encrypted secrets, no public endpoint
+- OIDC IDP - To allow pods to assume AWS roles
+- Auto-scaling Group for Node group (optional) - including optional bootstrap configuration for the proxy
+- Fargate Profile (optional) - for running containers on Fargate
 
 Once completed you can (from within the VPC) communicate with your EKS cluster and see a list of running worker nodes.
+
+## Justification
+
+To create an EKS cluster that is fully private and running within a VPC with no internet connection can be a challenge.  A couple of challenges prevent this from happening easily.
+
+First the EKS Cluster resource in CloudFormation does not allow you to specify that you want a private-only endpoint.  [Terraform](https://www.terraform.io/docs/providers/aws/r/eks_cluster.html) currently supports this configuration.
+
+Second, the EKS worker nodes, when they start need to communicate with the EKS master nodes and to do that they require details such as the CA certificate for the EKS master nodes.  Normally, at bootstrap, the EC2 instance can query the EKS control plane and retrieve these details however the EKS service currently does not have support for [VPC endpoints for the EKS control plane](https://github.com/aws/containers-roadmap/issues/298).  Managed node groups can be an offset for this but you may want to customize the underlying host or use a custom AMI.
+
+Third, once launched the instance role of the EC2 worker nodes must be registered with the EKS master node to allow the nodes to communicate with the cluster.
+
+To solve these issues this project takes advantage of all of the flexibility the EKS service makes available to script the creation of a completely private EKS cluster.
+
+> Note that this repository is here for illustration and demonstration purposes only.  The hope is that this repository aids in helping your understanding of how EKS works to manage Kubernetes clusters on your behalf.  It is not intended as production code and should not be adopted as such.
+
+## Quickstart
+
+1. Clone this repository to a machine that has CLI access to your AWS account.
+1. Edit the values in `variables.sh`
+
+    1. Edit `CLUSTER_NAME`
+    1. Edit `REGION`
+
+1. Execute `launch_all.sh`
 
 ## Getting started
 
