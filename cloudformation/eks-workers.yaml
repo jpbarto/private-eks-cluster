@@ -3,7 +3,7 @@ Description: Amazon EKS - Node Group
 Parameters:
   KeyName:
     Description: The EC2 Key Pair to allow SSH access to the instances
-    Type: 'AWS::EC2::KeyPair::KeyName'
+    Type: String
   NodeImageId:
     Description: AMI id for the node instances.
     Type: 'AWS::EC2::Image::Id'
@@ -182,6 +182,9 @@ Metadata:
           - VpcId
           - Subnets
 
+Conditions:
+  UseEC2KeyPair: !Not [!Equals [!Ref KeyName, ""]]
+
 ## RESOURCES
 Resources:
   NodeInstanceProfile:
@@ -304,7 +307,7 @@ Resources:
       IamInstanceProfile: !Ref NodeInstanceProfile
       ImageId: !Ref NodeImageId
       InstanceType: !Ref NodeInstanceType
-      KeyName: !Ref KeyName
+      KeyName: !If [UseEC2KeyPair, !Ref KeyName, !Ref "AWS::NoValue"]
       SecurityGroups:
         - !GetAtt NodeSecurityGroup.GroupId
         - !Ref WorkerSecurityGroup

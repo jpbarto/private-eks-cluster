@@ -71,7 +71,7 @@ echo $HTTP_PROXY_ENDPOINT_SERVICE_NAME
 ```
 After, enter the output of the proxy endpoint service name into the `variables.sh` file.
 
- Once these values are set you can execute `launch_all.sh` and get a coffee. This will take approximately 10 min to create the vpc, endpoints, cluster, and worker nodes.
+ Once these values are set you can execute `launch_all.sh` and get a coffee. This will take approximately 10 - 15 min to create the vpc, endpoints, cluster, and worker nodes.
 
  After this is completed you will have an EKS cluster that you can review using the AWS console or CLI. You can also remotely access your VPC using an Amazon WorkSpaces, VPN, or similar means. Using the `kubectl` client you should then see something similar to:
 
