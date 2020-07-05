@@ -3,6 +3,9 @@ resource "local_file" "post_apply_script" {
     content = <<EOF
 #!/bin/bash
 
+# configure local kubectl
+aws eks update-kubeconfig --name ${module.eks_cluster.cluster_id} --region ${data.aws_region.current.name}
+
 # configure K8s for the secondary CIDR range
 kubectl set env ds aws-node -n kube-system AWS_VPC_K8S_CNI_CUSTOM_NETWORK_CFG=true
 kubectl set env ds aws-node -n kube-system ENI_CONFIG_LABEL_DEF=failure-domain.beta.kubernetes.io/zone

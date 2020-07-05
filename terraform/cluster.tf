@@ -28,6 +28,8 @@ module "eks_cluster" {
 
   enable_irsa = true
 
+  cluster_enabled_log_types = ["api","audit","authenticator","controllerManager","scheduler"]
+
   cluster_encryption_config = [
     {
       provider_key_arn = aws_kms_key.eks.arn
