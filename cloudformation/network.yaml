@@ -1,0 +1,401 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "Creates a private VPC with no IGW"
+Parameters:
+  StackPrefix:
+    Description: Prefix to prepend to named resources
+    Type: String
+
+  HttpProxyServiceName:
+    Description: The name for the HTTP/S endpoint service
+    Type: String
+
+Mappings:
+  SubnetConfig:
+    VPC:
+      CIDR: "10.0.0.0/16"
+    Private1:
+      CIDR: "10.0.2.0/24"
+    Private2:
+      CIDR: "10.0.4.0/24"
+    Private3:
+      CIDR: "10.0.8.0/24"
+
+  AZRegions:
+    ap-northeast-1:
+      AZs: ["a", "b", "c"]
+    ap-northeast-2:
+      AZs: ["a", "b", "c"]
+    ap-south-1:
+      AZs: ["a", "b", "c"]
+    ap-southeast-1:
+      AZs: ["a", "b", "c"]
+    ap-southeast-2:
+      AZs: ["a", "b", "c"]
+    ca-central-1:
+      AZs: ["a", "b", "c"]
+    eu-central-1:
+      AZs: ["a", "b", "c"]
+    eu-west-1:
+      AZs: ["a", "b", "c"]
+    eu-west-2:
+      AZs: ["a", "b", "c"]
+    sa-east-1:
+      AZs: ["a", "b", "c"]
+    us-east-1:
+      AZs: ["a", "b", "c"]
+    us-east-2:
+      AZs: ["a", "b", "c"]
+    us-west-1:
+      AZs: ["a", "b", "c"]
+    us-west-2:
+      AZs: ["a", "b", "c"]
+
+Conditions:
+  CreateProxyEndpoint: !Not [!Equals [!Ref HttpProxyServiceName, ""]]
+
+Resources:
+  PrivateEKSVPC:
+    Type: "AWS::EC2::VPC"
+    Properties:
+      EnableDnsSupport: True
+      EnableDnsHostnames: True
+      CidrBlock:
+        Fn::FindInMap:
+          - "SubnetConfig"
+          - "VPC"
+          - "CIDR"
+      Tags:
+        - Key: "Name"
+          Value: !Sub ${StackPrefix}-private-eks-vpc
+
+  PrivateSubnet1:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref PrivateEKSVPC
+      AvailabilityZone:
+        Fn::Sub:
+          - "${AWS::Region}${AZ}"
+          - AZ: !Select [0, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+      CidrBlock:
+        Fn::FindInMap:
+          - "SubnetConfig"
+          - "Private1"
+          - "CIDR"
+      Tags:
+        - Key: "Name"
+          Value: !Join
+            - ""
+            - - !Sub "${StackPrefix}"
+              - "-private-"
+              - !Select [0, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+
+  PrivateSubnet2:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref PrivateEKSVPC
+      AvailabilityZone:
+        Fn::Sub:
+          - "${AWS::Region}${AZ}"
+          - AZ: !Select [1, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+      CidrBlock:
+        Fn::FindInMap:
+          - "SubnetConfig"
+          - "Private2"
+          - "CIDR"
+      Tags:
+        - Key: "Name"
+          Value: !Join
+            - ""
+            - - !Sub "${StackPrefix}"
+              - "-private-"
+              - !Select [1, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+
+  PrivateSubnet3:
+    Type: "AWS::EC2::Subnet"
+    Properties:
+      VpcId: !Ref PrivateEKSVPC
+      AvailabilityZone:
+        Fn::Sub:
+          - "${AWS::Region}${AZ}"
+          - AZ: !Select [2, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+      CidrBlock:
+        Fn::FindInMap:
+          - "SubnetConfig"
+          - "Private3"
+          - "CIDR"
+      Tags:
+        - Key: "Name"
+          Value: !Join
+            - ""
+            - - !Sub "${StackPrefix}"
+              - "-private-"
+              - !Select [2, !FindInMap ["AZRegions", !Ref "AWS::Region", "AZs"]]
+
+  PrivateRouteTable1:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref PrivateEKSVPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub ${StackPrefix}-private-route-table-1
+
+  PrivateRouteTable2:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref PrivateEKSVPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub ${StackPrefix}-private-route-table-2
+
+  PrivateRouteTable3:
+    Type: "AWS::EC2::RouteTable"
+    Properties:
+      VpcId: !Ref PrivateEKSVPC
+      Tags:
+        - Key: "Name"
+          Value: !Sub ${StackPrefix}-private-route-table-3
+
+  PrivateSubnetRouteTableAssociation1:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId:
+        Ref: "PrivateSubnet1"
+      RouteTableId:
+        Ref: "PrivateRouteTable1"
+
+  PrivateSubnetRouteTableAssociation2:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId:
+        Ref: "PrivateSubnet2"
+      RouteTableId:
+        Ref: "PrivateRouteTable2"
+
+  PrivateSubnetRouteTableAssociation3:
+    Type: "AWS::EC2::SubnetRouteTableAssociation"
+    Properties:
+      SubnetId:
+        Ref: "PrivateSubnet3"
+      RouteTableId:
+        Ref: "PrivateRouteTable3"
+
+  EndpointClientSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to designate resources access to the VPC endpoints
+      VpcId: !Ref PrivateEKSVPC
+
+  EndpointSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group to govern who can access the endpoints
+      VpcId: !Ref PrivateEKSVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          SourceSecurityGroupId: !GetAtt EndpointClientSecurityGroup.GroupId
+        - IpProtocol: tcp
+          FromPort: 3128
+          ToPort: 3128
+          SourceSecurityGroupId: !GetAtt EndpointClientSecurityGroup.GroupId
+
+  S3APIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.s3"
+      VpcEndpointType: Gateway
+      RouteTableIds:
+        - !Ref PrivateRouteTable1
+        - !Ref PrivateRouteTable2
+        - !Ref PrivateRouteTable3
+      VpcId: !Ref PrivateEKSVPC
+
+  HttpProxyEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Condition: CreateProxyEndpoint
+    Properties:
+      ServiceName: !Ref HttpProxyServiceName
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: false
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+  ECRAPIEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.api"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+  ECRDockerEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ecr.dkr"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+  EC2Endpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ec2"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+  CWLogsEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.logs"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+  EC2AutoScalingEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.autoscaling"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+  STSEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.sts"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+  SSMEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssm"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+  SSMMessagesEndpoint:
+    Type: "AWS::EC2::VPCEndpoint"
+    Properties:
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.ssmmessages"
+      VpcEndpointType: Interface
+      PrivateDnsEnabled: true
+      SecurityGroupIds:
+        - !GetAtt EndpointSecurityGroup.GroupId
+      SubnetIds:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+        - !Ref PrivateSubnet3
+      VpcId: !Ref PrivateEKSVPC
+
+Outputs:
+  VPCId:
+    Description: "VPCId of VPC"
+    Value: !Ref PrivateEKSVPC
+    Export:
+      Name: !Sub "${StackPrefix}-PrivateEKSVPC"
+
+  VPCCIDR:
+    Description: "VPC CIDR block"
+    Value: !GetAtt PrivateEKSVPC.CidrBlock
+    Export:
+      Name: !Sub "${StackPrefix}-PrivateEKSVPCCIDR"
+
+  PrivateSubnet1:
+    Description: "SubnetId of private subnet 1"
+    Value: !Ref PrivateSubnet1
+    Export:
+      Name: !Sub "${StackPrefix}-PrivateSubnet1"
+
+  PrivateSubnet2:
+    Description: "SubnetId of private subnet 2"
+    Value: !Ref PrivateSubnet2
+    Export:
+      Name: !Sub "${StackPrefix}-PrivateSubnet2"
+
+  PrivateSubnet3:
+    Description: "SubnetId of private subnet 3"
+    Value: !Ref PrivateSubnet3
+    Export:
+      Name: !Sub "${StackPrefix}-PrivateSubnet3"
+
+  DefaultSecurityGroup:
+    Description: "DefaultSecurityGroup Id"
+    Value: !GetAtt PrivateEKSVPC.DefaultSecurityGroup
+    Export:
+      Name: !Sub "${StackPrefix}-DefaultSecurityGroup"
+
+  MasterSecurityGroup:
+    Description: "Security Group ID for the EKS Master node"
+    Value: !GetAtt PrivateEKSVPC.DefaultSecurityGroup
+    Export:
+      Name: !Sub "${StackPrefix}-MasterSecurityGroup"
+
+  EndpointClientSecurityGroup:
+    Description: Security group to grant access to VPC endpoints
+    Value: !GetAtt EndpointClientSecurityGroup.GroupId
+    Export:
+      Name: !Sub "${StackPrefix}-EndpointClientSecurityGroup"
+
+  HttpProxyUrl:
+    Description: The URL for the HTTP/S proxy
+    Condition: CreateProxyEndpoint
+    Value: !Sub
+      - "http://${ProxyEndpoint}:3128"
+      - ProxyEndpoint:
+          !Select [
+            1,
+            !Split [":", !Select [0, !GetAtt HttpProxyEndpoint.DnsEntries]],
+          ]

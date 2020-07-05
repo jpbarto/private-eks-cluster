@@ -1,0 +1,145 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Metadata:
+  License: Apache-2.0
+Description:
+  "AWS CloudFormation Sample Template IAM_Users_Groups_and_Policies: Sample
+  template showing how to create IAM users, groups and policies. It creates a single
+  user that is a member of a users group and an admin group. The groups each have
+  different IAM policies associated with them. Note: This example also creates an
+  AWSAccessKeyId/AWSSecretKey pair associated with the new user. The example is somewhat
+  contrived since it creates all of the users and groups, typically you would be creating
+  policies, users and/or groups that contain references to existing users or groups
+  in your environment. Note that you will need to specify the CAPABILITY_IAM flag
+  when you create the stack to allow this template to execute. You can do this through
+  the AWS management console by clicking on the check box acknowledging that you understand
+  this template creates IAM resources or by specifying the CAPABILITY_IAM flag to
+  the cfn-create-stack command line tool or CreateStack API call."
+
+Parameters:
+  StackPrefix:
+    Description: Prefix for prepending to named resources
+    Type: String
+
+Resources:
+  EKSMasterRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${StackPrefix}-eks-master-role
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "eks.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKSServicePolicy
+        - arn:aws:iam::aws:policy/AmazonEKSClusterPolicy
+      Policies:
+        - PolicyName: "eks-master-node-permissions"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "cloudwatch:PutMetricData"
+                Resource: "*"
+              - Effect: "Allow"
+                Action: 
+                  - kms:DescribeKey
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey
+                  - kms:GenerateDataKeyWithoutPlaintext
+                Resource: "*"
+
+  EKSMasterKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Key for encrypting EKS secrets
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: Enable IAM User Permissions
+            Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: kms:*
+            Resource: "*"
+          - Sid: Allow use of the key
+            Effect: Allow
+            Principal:
+              AWS: !GetAtt EKSMasterRole.Arn
+            Action:
+              - kms:DescribeKey
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey
+              - kms:GenerateDataKeyWithoutPlaintext
+            Resource: "*"
+
+  EKSWorkerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub ${StackPrefix}-eks-worker-role
+      Path: "/"
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "ec2.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+      Policies:
+        - PolicyName: "eks-worker-node-permissions"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - "ec2:DescribeTags"
+                  - "cloudformation:SignalResource"
+                Resource: "*"
+
+  EKSWorkerNodePolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName: !Sub ${StackPrefix}-EKSWorkerNode
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - "sagemaker:List*"
+              - "sagemaker:Describe*"
+              - "sagemaker:Search"
+              - "sagemaker:GetSearchSuggestions"
+              - "sagemaker:RenderUiTemplate"
+            Resource: "*"
+
+Outputs:
+  EKSMasterRoleArn:
+    Description: Role to be used to administer environment resources
+    Value: !GetAtt EKSMasterRole.Arn
+    Export:
+      Name: !Sub "${StackPrefix}-EnvironmentAdministratorRoleArn"
+  EKSMasterKeyArn:
+    Description: ARN of KMS key for encrypting EKS secrets
+    Value: !GetAtt EKSMasterKey.Arn
+    Export:
+      Name: !Sub "${StackPrefix}-EKSMasterKeyArn"
+  EKSWorkerRoleArn:
+    Description: Role to be used by SageMaker provisioned infrastructure
+    Value: !GetAtt EKSWorkerRole.Arn
+    Export:
+      Name: !Sub "${StackPrefix}-EKSWorkerRoleArn"
