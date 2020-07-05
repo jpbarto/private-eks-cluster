@@ -1,3 +1,3 @@
 provider "aws" {
-    region = "eu-central-1"
+    region = var.target_region
 }
