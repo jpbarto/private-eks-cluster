@@ -29,5 +29,5 @@ Once completed you should have a functioning K8s cluster in AWS which deploys co
 
 ```bash
 kubectl get nodes
-kubectl run my-shell --rm -i --tty --image ubuntu -- bash   
+kubectl run alpine-shell --rm -i --tty --image alpine -- sh
 ```
